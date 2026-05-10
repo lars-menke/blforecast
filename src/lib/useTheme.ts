@@ -1,42 +1,21 @@
-import { useState, useEffect } from 'react';
-
-type Theme = 'light' | 'dark' | 'system';
-
-function getSystemDark() {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
-}
-
-function applyTheme(theme: Theme) {
-  const dark = theme === 'dark' || (theme === 'system' && getSystemDark());
-  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-}
+import { useEffect, useState } from 'react';
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    return (localStorage.getItem('theme') as Theme) ?? 'system';
+  const [isDark, setIsDark] = useState(() => {
+    const stored = localStorage.getItem('bl_theme');
+    return stored ? stored === 'dark' : true; // Velocity default: dark
   });
 
   useEffect(() => {
-    applyTheme(theme);
-    if (theme !== 'system') {
-      localStorage.setItem('theme', theme);
-    } else {
-      localStorage.removeItem('theme');
-    }
-  }, [theme]);
+    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+    document.documentElement.dataset.variant = 'velocity';
+    localStorage.setItem('bl_theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
 
-  // Sync on system preference change
   useEffect(() => {
-    if (theme !== 'system') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => applyTheme('system');
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [theme]);
+    document.documentElement.dataset.variant = 'velocity';
+    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const toggle = () => setThemeState(t => t === 'dark' ? 'light' : 'dark');
-
-  const isDark = theme === 'dark' || (theme === 'system' && getSystemDark());
-
-  return { theme, toggle, isDark };
+  return { isDark, toggle: () => setIsDark(v => !v) };
 }
