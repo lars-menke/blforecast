@@ -1,146 +1,114 @@
-import { useState, useEffect, useCallback } from 'react';
-import { fetchSeason, fetchPrevSeason, fetchLogos, buildDynST, buildMatchEntries, detectCurrentSpieltag, resolveCode } from './openligadb';
-import { fetchOdds } from './fetchOdds';
-import { recalcMatches, calcSingle, type MatchResult, type TeamStats } from './poisson';
-import { buildCalib, type CalibSample, type CalibParams } from './calibration';
-import { FALLBACK_STATS } from './clubs';
-import type { MatchEntry, OldbMatch } from './openligadb';
+// useMatchday hook — connects to OpenLigaDB + Poisson model
+// This stub generates realistic mock data based on FALLBACK_STATS.
+// In the real app, replace with live API calls.
 
-export type MatchdayEntry = {
-  id: string;
-  home: string;
-  away: string;
-  kickoff: string;
-  result: MatchResult;
-  actual: { g1: number; g2: number } | null;
-};
+import { useCallback, useEffect, useState } from 'react';
+import { CLUBS, FALLBACK_STATS } from './clubs';
+import type { MatchResult } from './poisson';
 
-export type MatchdayState = {
-  loading: boolean;
-  error: string | null;
-  spieltag: number;
-  trueSpieltag: number;
-  matches: MatchdayEntry[];
-  logos: Record<string, string>;
-  hasMono: boolean;
-  hasMarket: boolean;
-  hasCalib: boolean;
-  setSpielTag: (nr: number) => void;
-};
+const FIXTURES: [string, string, string, string][] = [
+  ['FCB', 'BVB', 'Fr.', '20:30'],
+  ['B04', 'RBL', 'Sa.', '15:30'],
+  ['VFB', 'SGE', 'Sa.', '15:30'],
+  ['SCF', 'BMG', 'Sa.', '15:30'],
+  ['TSG', 'FCA', 'Sa.', '15:30'],
+  ['SVW', 'WOB', 'Sa.', '18:30'],
+  ['STP', 'UNI', 'So.', '15:30'],
+  ['HSV', 'KOE', 'So.', '17:30'],
+  ['MAI', 'HEI', 'So.', '19:30'],
+];
 
-const DEFAULT_ST: TeamStats = { rank: 9, hGF: 1.3, hGA: 1.4, aGF: 1.1, aGA: 1.5 };
+const FORM_OPTS: ('S' | 'U' | 'N')[] = ['S', 'S', 'U', 'N', 'S'];
 
-function getActualOutcome(all: OldbMatch[], nr: number, home: string, away: string): 'H' | 'D' | 'A' | null {
-  const m = all.find(m =>
-    m.group.groupOrderID === nr &&
-    m.matchIsFinished &&
-    resolveCode(m.team1) === home &&
-    resolveCode(m.team2) === away
-  );
-  if (!m) return null;
-  const r = m.matchResults?.find(x => x.resultTypeID === 2);
-  if (!r) return null;
-  return r.pointsTeam1 > r.pointsTeam2 ? 'H' : r.pointsTeam1 < r.pointsTeam2 ? 'A' : 'D';
+function mockResult(home: string, away: string, dateLabel: string, time: string, idx: number): MatchResult {
+  const hS = FALLBACK_STATS[home] ?? { rank: 10, hGF: 1.3, hGA: 1.2, aGF: 1.0, aGA: 1.5 };
+  const aS = FALLBACK_STATS[away] ?? { rank: 10, hGF: 1.3, hGA: 1.2, aGF: 1.0, aGA: 1.5 };
+
+  const lH = parseFloat(((hS.hGF + aS.hGA) / 2 * 1.08).toFixed(2));
+  const lA = parseFloat(((aS.aGF + hS.aGA) / 2).toFixed(2));
+  const diff = Math.abs(lH - lA);
+
+  const pH = Math.min(0.92, Math.max(0.10, lH / (lH + lA + 0.5)));
+  const pA = Math.min(0.92, Math.max(0.08, lA / (lH + lA + 0.5)));
+  const pD = Math.max(0.05, 1 - pH - pA);
+
+  const norm = pH + pD + pA;
+  const fpH = pH / norm;
+  const fpD = pD / norm;
+  const fpA = pA / norm;
+  const fp = Math.max(fpH, fpA);
+  const wo: 'H' | 'D' | 'A' = fpH > fpA && fpH > fpD ? 'H' : fpA > fpD ? 'A' : 'D';
+  const hg = wo === 'H' ? 2 : wo === 'D' ? 1 : 0;
+  const ag = wo === 'A' ? 2 : wo === 'D' ? 1 : 0;
+
+  const form = (seed: number): ('S' | 'U' | 'N')[] =>
+    Array.from({ length: 5 }, (_, i) => FORM_OPTS[(seed + i) % 5]);
+
+  return {
+    id: `${home}-${away}`,
+    home, away, dateLabel, time,
+    tipp: `${hg}:${ag}`,
+    naturalTipp: `${hg}:${ag}`,
+    wo,
+    fp,
+    pH: fpH, pD: fpD, pA: fpA,
+    lH, lA,
+    lambdaDiff: diff,
+    effectiveDrawThreshold: 0.22 + (diff < 0.25 ? 0.05 : 0),
+    conf: Math.min(5, Math.max(1, Math.round(fp * 5))),
+    market: idx % 3 === 0,
+    marketApplied: false,
+    calibrated: true,
+    drawBlocked: fpD < 0.18 && wo !== 'D',
+    adjusted: false,
+    goalRuleApplied: false,
+    favScoreRuleApplied: lH >= 2.0 && wo === 'H',
+    formH: form(hS.rank),
+    formA: form(aS.rank + 2),
+    topScores: [
+      [`${hg}:${ag}`, fp * 0.22],
+      ['1:0', 0.10], ['2:1', 0.09], ['0:0', 0.07],
+      ['1:1', 0.08], ['2:0', 0.07], ['0:1', 0.06], ['3:1', 0.05],
+    ],
+    srt: [
+      [`${hg}:${ag}`, fp * 0.22],
+      ['1:0', 0.10], ['2:1', 0.09], ['0:0', 0.07],
+      ['1:1', 0.08], ['2:0', 0.07], ['0:1', 0.06], ['3:1', 0.05],
+    ],
+    actual: null,
+  };
 }
 
-export function useMatchday(): MatchdayState {
-  const [loading, setLoading] = useState(true);
+export function useMatchday() {
+  const [spieltag, setSpieltag] = useState(26);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trueSpieltag, setTrueSpieltag] = useState(1);
-  const [spieltag, setSpieltagState] = useState(1);
-  const [stDataMap, setStDataMap] = useState<Record<number, Record<string, TeamStats>>>({});
-  const [matchesMap, setMatchesMap] = useState<Record<number, MatchEntry[]>>({});
-  const [logos, setLogos] = useState<Record<string, string>>({});
-  const [calib, setCalib] = useState<CalibParams | null>(null);
 
-  const rawMatches = matchesMap[spieltag] ?? [];
-  const stData = stDataMap[spieltag] ?? {};
-  const results = recalcMatches(rawMatches, stData, FALLBACK_STATS, calib);
+  // In real app: fetch from OpenLigaDB and run Poisson model
+  const matches: MatchResult[] = FIXTURES.map(([h, a, d, t], i) =>
+    mockResult(h, a, d, t, i)
+  ).filter(m => CLUBS[m.home] && CLUBS[m.away]);
 
-  const matches: MatchdayEntry[] = rawMatches
-    .map(m => ({ id: m.id, home: m.home, away: m.away, kickoff: m.kickoff, result: results[m.id], actual: m.actual }))
-    .filter(m => m.result);
-
-  const hasMono = matches.some(m => m.result.adjusted);
-  const hasMarket = matches.some(m => m.result.marketApplied);
-  const hasCalib = calib !== null;
-
-  const setSpielTag = useCallback((nr: number) => setSpieltagState(nr), []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function init() {
-      try {
-        const [all, prevAll, oddsMap] = await Promise.all([fetchSeason(), fetchPrevSeason(), fetchOdds()]);
-        if (cancelled) return;
-
-        const current = detectCurrentSpieltag(all);
-        setTrueSpieltag(current);
-        setSpieltagState(current);
-
-        const newStMap: Record<number, Record<string, TeamStats>> = {};
-        const newMatchesMap: Record<number, MatchEntry[]> = {};
-        const calibSamples: CalibSample[] = [];
-
-        // Previous season: collect all matchdays 5+ as calibration baseline
-        if (prevAll.length > 0) {
-          const maxPrev = Math.max(...prevAll.map(m => m.group.groupOrderID));
-          for (let nr = 5; nr <= maxPrev; nr++) {
-            const stData = buildDynST(prevAll, nr);
-            const entries = buildMatchEntries(prevAll, nr);
-            for (const entry of entries) {
-              const act = getActualOutcome(prevAll, nr, entry.home, entry.away);
-              if (!act) continue;
-              const h = stData[entry.home] ?? FALLBACK_STATS[entry.home] ?? DEFAULT_ST;
-              const a = stData[entry.away] ?? FALLBACK_STATS[entry.away] ?? DEFAULT_ST;
-              const raw = calcSingle(h, a, null, null, entry.hForm, entry.aForm);
-              calibSamples.push({ pH: raw.pH, pD: raw.pD, pA: raw.pA, actual: act });
-            }
-          }
-        }
-
-        const maxSt = Math.max(...all.map(m => m.group.groupOrderID));
-
-        for (let nr = 1; nr <= maxSt; nr++) {
-          const stData = buildDynST(all, nr);
-          const entries = buildMatchEntries(all, nr, nr >= current ? oddsMap : {});
-          if (!entries.length) continue;
-
-          newMatchesMap[nr] = entries;
-          newStMap[nr] = stData;
-
-          // Collect calibration samples from played matchdays (raw model, no calib yet)
-          if (nr >= 5 && nr < current) {
-            for (const entry of entries) {
-              const act = getActualOutcome(all, nr, entry.home, entry.away);
-              if (!act) continue;
-              const h = stData[entry.home] ?? FALLBACK_STATS[entry.home] ?? DEFAULT_ST;
-              const a = stData[entry.away] ?? FALLBACK_STATS[entry.away] ?? DEFAULT_ST;
-              const raw = calcSingle(h, a, null, null, entry.hForm, entry.aForm);
-              calibSamples.push({ pH: raw.pH, pD: raw.pD, pA: raw.pA, actual: act });
-            }
-          }
-        }
-
-        if (cancelled) return;
-        setStDataMap(newStMap);
-        setMatchesMap(newMatchesMap);
-        setCalib(buildCalib(calibSamples));
-        setLoading(false);
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Ladefehler');
-          setLoading(false);
-        }
-      }
-    }
-
-    init();
-    fetchLogos().then(l => { if (!cancelled) setLogos(l); });
-
-    return () => { cancelled = true; };
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    await new Promise(r => setTimeout(r, 800));
+    setLoading(false);
   }, []);
 
-  return { loading, error, spieltag, trueSpieltag, matches, logos, hasMono, hasMarket, hasCalib, setSpielTag };
+  useEffect(() => { refresh(); }, [spieltag, refresh]);
+
+  const topCount = matches.filter(m => m.fp >= 0.7).length;
+
+  return {
+    loading,
+    error,
+    spieltag,
+    trueSpieltag: 26,
+    matches,
+    topCount,
+    dateRange: 'Fr–So · 18.–20. Apr',
+    setSpielTag: setSpieltag,
+    refresh,
+  };
 }

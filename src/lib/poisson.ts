@@ -44,6 +44,18 @@ export type CalcResult = {
 export type MatchResult = CalcResult & {
   tipp: string;
   adjusted: boolean;
+  actual?: { g1: number; g2: number } | null;
+  // Velocity UI fields
+  id: string;
+  home: string;
+  away: string;
+  dateLabel: string;
+  time: string;
+  market: boolean;
+  conf: number;
+  formH: ('S' | 'U' | 'N')[];
+  formA: ('S' | 'U' | 'N')[];
+  topScores: [string, number][];
 };
 
 function pois(lambda: number, k: number): number {
@@ -279,7 +291,13 @@ export function recalcMatches(
     }
 
     assignedCounts[tipp] = (assignedCounts[tipp] ?? 0) + 1;
-    finalResults[m.id] = { ...r, tipp, adjusted };
+    finalResults[m.id] = {
+      ...r, tipp, adjusted,
+      id: m.id, home: m.home, away: m.away,
+      dateLabel: '', time: '',
+      market: false, conf: Math.round(r.fp * 5),
+      formH: [], formA: [], topScores: r.srt,
+    };
   });
 
   return finalResults;

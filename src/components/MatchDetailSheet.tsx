@@ -1,252 +1,152 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Club } from '../lib/clubs';
-import type { MatchResult } from '../lib/poisson';
+import s from './MatchDetailSheet.module.css';
 import { TeamLogo } from './TeamLogo';
-import styles from './MatchDetailSheet.module.css';
+import { CLUBS } from '../lib/clubs';
+import type { MatchResult } from '../lib/poisson';
 
 type Props = {
-  home: Club;
-  away: Club;
-  kickoff: string;
-  result: MatchResult;
-  homeLogo?: string;
-  awayLogo?: string;
+  match: MatchResult | null;
   onClose: () => void;
 };
 
-function pct(n: number) { return `${(n * 100).toFixed(0)}%`; }
-function lbl(n: number) { return n.toFixed(2); }
+export function MatchDetailSheet({ match: m, onClose }: Props) {
+  if (!m) return null;
+  return <SheetInner m={m} onClose={onClose} />;
+}
 
-export function MatchDetailSheet({ home, away, kickoff, result, homeLogo, awayLogo, onClose }: Props) {
-  const [hg, ag] = (result.tipp ?? '?').split(':').map(Number);
-  const topScores = result.srt.slice(0, 8);
-  const hasRules = result.drawBlocked || result.goalRuleApplied || result.favScoreRuleApplied || result.adjusted;
+function SheetInner({ m, onClose }: { m: MatchResult; onClose: () => void }) {
+  const home = CLUBS[m.home];
+  const away = CLUBS[m.away];
+  const [hg, ag] = m.tipp.split(':').map(Number);
 
   const sheetRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const dragging = useRef(false);
   const [dragY, setDragY] = useState(0);
 
-  // Lock body scroll while sheet is open
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  // Native touchmove listener with passive:false so preventDefault works
   useEffect(() => {
     const sheet = sheetRef.current;
     if (!sheet) return;
-
-    function onTouchMove(e: TouchEvent) {
+    const onMove = (e: TouchEvent) => {
       if (!dragging.current) return;
       const delta = e.touches[0].clientY - startY.current;
       if (delta <= 0) { dragging.current = false; setDragY(0); return; }
       e.preventDefault();
       setDragY(delta);
-    }
-
-    sheet.addEventListener('touchmove', onTouchMove, { passive: false });
-    return () => sheet.removeEventListener('touchmove', onTouchMove);
+    };
+    sheet.addEventListener('touchmove', onMove, { passive: false });
+    return () => sheet.removeEventListener('touchmove', onMove);
   }, []);
 
-  function onTouchStart(e: React.TouchEvent) {
-    const sheet = sheetRef.current;
-    if (!sheet || sheet.scrollTop > 2) return;
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (!sheetRef.current || sheetRef.current.scrollTop > 2) return;
     startY.current = e.touches[0].clientY;
     dragging.current = true;
-  }
-
-  function onTouchEnd() {
+  };
+  const onTouchEnd = () => {
     dragging.current = false;
-    if (dragY > 90) {
-      onClose();
-    } else {
-      setDragY(0);
-    }
-  }
+    if (dragY > 90) onClose();
+    else setDragY(0);
+  };
 
   return (
-    <div
-      className={styles.overlay}
-      onClick={onClose}
-      onTouchMove={e => e.preventDefault()}
-    >
+    <div className={s.overlay} onClick={onClose}>
       <div
         ref={sheetRef}
-        className={styles.sheet}
+        className={s.sheet}
         onClick={e => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         style={dragY > 0 ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}
       >
-        <div className={styles.handle} />
+        <div className={s.handle} />
 
-        {/* Teams + Tipp */}
-        <div className={styles.matchHead}>
-          <div className={styles.teamCol}>
-            <TeamLogo club={home} logoUrl={homeLogo} size="md" />
-            <span className={styles.teamName}>{home.name}</span>
+        <div className={s.hero}>
+          <div className={s.team}>
+            <TeamLogo code={m.home} className={s.mark} />
+            <span className={s.teamName}>{home?.fullName ?? m.home}</span>
           </div>
-          <div className={styles.tippCol}>
-            <div className={styles.tippScore} data-numeric>
-              {isNaN(hg) ? '?' : hg}:{isNaN(ag) ? '?' : ag}
+          <div className={s.heroMid}>
+            <div className={s.heroEyebrow}>PROGNOSE</div>
+            <div className={s.heroScore}>
+              <em>{isNaN(hg) ? '?' : hg}</em>
+              <span className={s.heroScoreColon}>:</span>
+              <em>{isNaN(ag) ? '?' : ag}</em>
             </div>
-            <div className={styles.tippMeta}>{kickoff}</div>
+            <div className={s.heroTime}>{m.dateLabel.toUpperCase()} · {m.time}</div>
           </div>
-          <div className={styles.teamCol}>
-            <TeamLogo club={away} logoUrl={awayLogo} size="md" />
-            <span className={styles.teamName}>{away.name}</span>
-          </div>
-        </div>
-
-        {/* Tipp-Kategorie Erklärung */}
-        <div className={styles.sectionLabel}>Einschätzung</div>
-        <div className={styles.sectionCard}>
-          <CategoryRow fp={result.fp} topTip={result.fp >= 0.70} />
-        </div>
-
-        {/* 1X2 */}
-        <div className={styles.sectionLabel}>Wahrscheinlichkeit</div>
-        <div className={styles.sectionCard}>
-          <div className={styles.probs} data-numeric>
-            <div className={styles.prob}>
-              <div className={styles.probVal}>{pct(result.pH)}</div>
-              <div className={styles.probLbl}>Heim</div>
-            </div>
-            <div className={styles.probSep} />
-            <div className={styles.prob}>
-              <div className={styles.probVal}>{pct(result.pD)}</div>
-              <div className={styles.probLbl}>Remis</div>
-            </div>
-            <div className={styles.probSep} />
-            <div className={styles.prob}>
-              <div className={styles.probVal}>{pct(result.pA)}</div>
-              <div className={styles.probLbl}>Gast</div>
-            </div>
-          </div>
-          <div className={styles.probBar}>
-            <div className={styles.probBarH} style={{ width: pct(result.pH) }} />
-            <div className={styles.probBarD} style={{ width: pct(result.pD) }} />
-            <div className={styles.probBarA} style={{ width: pct(result.pA) }} />
+          <div className={s.team}>
+            <TeamLogo code={m.away} className={s.mark} />
+            <span className={s.teamName}>{away?.fullName ?? m.away}</span>
           </div>
         </div>
 
-        {/* Modell-Parameter */}
-        <div className={styles.sectionLabel}>Modell</div>
-        <div className={styles.sectionCard}>
-          <Row label="λ Heim" desc="Erwartete Tore des Heimteams (Poisson-Mittelwert)" value={lbl(result.lH)} />
-          <Row label="λ Gast" desc="Erwartete Tore des Gastes (Poisson-Mittelwert)" value={lbl(result.lA)} />
-          <Row label="Dixon-Coles ρ" desc="Korrektur für 0:0 und 1:1 — niedrige Scores treten häufiger auf als Poisson vorhersagt" value="−0.13" />
-          <Row label="λ-Differenz" desc="Abstand der erwarteten Torwerte — je kleiner, desto ausgeglichener" value={lbl(result.lambdaDiff)} />
-          <Row
-            label="Remis-Schwelle"
-            desc={`Mindest-Remiswahrscheinlichkeit für einen X-Tipp${result.lambdaDiff < 0.25 ? ' — engeres Fenster wegen ausgeglichener Stärke' : ''}`}
-            value={`${(result.effectiveDrawThreshold * 100).toFixed(0)}%${result.lambdaDiff < 0.25 ? ' (eng)' : ''}`}
-          />
-          <Row
-            label="Marktkorrektur"
-            desc="Newton-Raphson-Kalibrierung auf Buchmacher-Quoten — passt λH und λA iterativ an bis Modell mit Markt übereinstimmt"
-            value={result.marketApplied ? 'aktiv' : 'inaktiv'}
-          />
-          <Row
-            label="Platt-Kalibrierung"
-            desc="Korrigiert Modell-Wahrscheinlichkeiten anhand vergangener Spieltage dieser Saison — reduziert Über-Konfidenz bei hohen Werten"
-            value={result.calibrated ? 'aktiv' : result.marketApplied ? 'n/a (Markt)' : 'Fallback'}
-          />
+        <div className={s.section}>
+          <div className={s.sectionLabel}>WAHRSCHEINLICHKEIT 1X2</div>
+          <div className={s.sectionCard}>
+            <div className={s.grid1x2}>
+              <div className={s.cell} data-pick={m.wo === 'H'}>
+                <span className={s.v}>{(m.pH * 100).toFixed(0)}%</span>
+                <span className={s.l}>HEIM · 1</span>
+              </div>
+              <div className={s.cell} data-pick={m.wo === 'D'}>
+                <span className={s.v}>{(m.pD * 100).toFixed(0)}%</span>
+                <span className={s.l}>REMIS · X</span>
+              </div>
+              <div className={s.cell} data-pick={m.wo === 'A'}>
+                <span className={s.v}>{(m.pA * 100).toFixed(0)}%</span>
+                <span className={s.l}>GAST · 2</span>
+              </div>
+            </div>
+            <div className={s.bar1x2}>
+              <div className={s.h} style={{ width: `${m.pH * 100}%` }} />
+              <div className={s.d} style={{ width: `${m.pD * 100}%` }} />
+              <div className={s.a} style={{ width: `${m.pA * 100}%` }} />
+            </div>
+          </div>
         </div>
 
-        {/* Aktive Regeln */}
-        {hasRules && (
-          <>
-            <div className={styles.sectionLabel}>Aktive Regeln</div>
-            <div className={styles.sectionCard}>
-              {result.drawBlocked && (
-                <div className={styles.rule}>
-                  <span className={styles.ruleIcon}>⚠️</span>
-                  <span className={styles.ruleText}>
-                    Remis gesperrt — X={pct(result.pD)} {'<'} {(result.effectiveDrawThreshold * 100).toFixed(0)}% Schwelle → {result.wo === 'H' ? 'Heimsieg' : 'Auswärtssieg'}
-                  </span>
-                </div>
-              )}
-              {result.goalRuleApplied && (
-                <div className={styles.rule}>
-                  <span className={styles.ruleIcon}>⚽</span>
-                  <span className={styles.ruleText}>Mindesttor-Regel — P(≥1 Tor) ≥ 50%, Score mit 0 Toren verworfen</span>
-                </div>
-              )}
-              {result.favScoreRuleApplied && (
-                <div className={styles.rule}>
-                  <span className={styles.ruleIcon}>🔵</span>
-                  <span className={styles.ruleText}>
-                    Favorit-Mindestscore — λ={lbl(result.wo === 'H' ? result.lH : result.lA)} ≥ 2.0, mind. 2 Tore erzwungen
-                  </span>
-                </div>
-              )}
-              {result.adjusted && (
-                <div className={styles.rule}>
-                  <span className={styles.ruleIcon}>🔀</span>
-                  <span className={styles.ruleText}>Monokultur-Schutz — Score war zu häufig vergeben, Alternative eingesetzt</span>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+        <div className={s.section}>
+          <div className={s.sectionLabel}>MODELL</div>
+          <div className={s.sectionCard}>
+            <Row label="λ HEIM · xG"    value={m.lH.toFixed(2)} />
+            <Row label="λ GAST · xG"    value={m.lA.toFixed(2)} />
+            <Row label="DIXON-COLES ρ"  value="−0.13" />
+            <Row label="MARKTKORREKTUR" value={m.market ? 'AKTIV' : 'INAKTIV'} />
+            <Row label="KONFIDENZ"      value={`${m.conf}/5`} />
+            {m.drawBlocked && <Row label="REMIS" value="GESPERRT" />}
+          </div>
+        </div>
 
-        {/* Top-Scores */}
-        <div className={styles.sectionLabel}>Wahrscheinlichste Scores</div>
-        <div className={styles.sectionCard}>
-          <div className={styles.scoreGrid} data-numeric>
-            {topScores.map(([score, p]) => (
-              <div
-                key={score}
-                className={`${styles.scoreCell} ${score === result.tipp ? styles.scoreCellActive : ''}`}
-              >
-                <div className={styles.scoreCellScore}>{score}</div>
-                <div className={styles.scoreCellP}>{(p * 100).toFixed(1)}%</div>
+        <div className={s.section}>
+          <div className={s.sectionLabel}>TOP-SCORES</div>
+          <div className={s.scores}>
+            {m.topScores.slice(0, 8).map(([score, p]) => (
+              <div key={score} className={s.scoreCell} data-active={score === m.tipp}>
+                <div className={s.scoreS}>{score}</div>
+                <div className={s.scoreP}>{(p * 100).toFixed(1)}%</div>
               </div>
             ))}
           </div>
         </div>
 
-        <button className={styles.closeBtn} onClick={onClose}>Schließen</button>
+        <button className={s.close} onClick={onClose}>SCHLIESSEN</button>
       </div>
     </div>
   );
 }
 
-function CategoryRow({ fp, topTip }: { fp: number; topTip: boolean }) {
-  type Cat = { label: string; cls: string; desc: string };
-  const cat: Cat =
-    fp >= 0.70 ? { label: 'Favorit', cls: styles.catFav, desc: `Klarer Favorit — das Modell sieht eine Seite mit ≥70% Siegwahrscheinlichkeit (hier: ${(fp * 100).toFixed(0)}%). Hohe Konfidenz, aber kein Freifahrtschein.` }
-    : fp >= 0.55 ? { label: 'Kante', cls: styles.catMid, desc: `Leichter Vorteil — eine Seite hat 55–69% Siegchance (hier: ${(fp * 100).toFixed(0)}%). Tendenz klar, Ausgang offen.` }
-    : { label: '50/50', cls: styles.catFifty, desc: `Ausgeglichenes Spiel — keine Seite hat mehr als 55% Chance (hier: ${(fp * 100).toFixed(0)}%). Jedes Ergebnis ist realistisch.` };
-
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className={styles.catRow}>
-      <div className={styles.catBadges}>
-        <span className={`${styles.catBadge} ${cat.cls}`}>{cat.label}</span>
-        {topTip && <span className={styles.catBadgeTop}>TOP</span>}
-      </div>
-      <p className={styles.catDesc}>{cat.desc}</p>
-      {topTip && (
-        <p className={styles.catDesc} style={{ marginTop: 4 }}>
-          <strong>TOP-Tipp</strong> — Spiele mit ≥70% Favorit-Wahrscheinlichkeit. Die stärksten Prognosen des Spieltags.
-        </p>
-      )}
-    </div>
-  );
-}
-
-function Row({ label, desc, value }: { label: string; desc: string; value: string }) {
-  return (
-    <div className={styles.row}>
-      <div className={styles.rowLabelBlock}>
-        <span className={styles.rowLabel}>{label}</span>
-        <span className={styles.rowDesc}>{desc}</span>
-      </div>
-      <span className={`${styles.rowValue} ${styles.rowMono}`}>{value}</span>
+    <div className={s.row}>
+      <span className={s.rowLabel}>{label}</span>
+      <span className={s.rowValue}>{value}</span>
     </div>
   );
 }
