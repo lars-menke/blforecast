@@ -119,7 +119,7 @@
 }
 .score {
   font-family: var(--bl-font);
-  font-size: 36px; font-weight: 900;
+  font-size: 28px; font-weight: 900;
   letter-spacing: -1.6px; line-height: 1;
   font-stretch: 80%;
   font-variant-numeric: tabular-nums;

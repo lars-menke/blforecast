@@ -73,7 +73,7 @@
 }
 .heroScore {
   font-family: var(--bl-font);
-  font-size: 64px; font-weight: 900;
+  font-size: 48px; font-weight: 900;
   letter-spacing: -3px; line-height: 0.85;
   font-stretch: 78%;
   font-variant-numeric: tabular-nums;

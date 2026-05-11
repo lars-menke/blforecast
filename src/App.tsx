@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTheme } from './lib/useTheme';
+import { useStandings } from './lib/useStandings';
+import { useSeason } from './lib/useSeason';
 import { SplashScreen } from './screens/SplashScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { MatchdayScreen } from './screens/MatchdayScreen';
@@ -17,10 +19,13 @@ function hasOnboarded() {
 }
 
 export default function App() {
-  useTheme(); // sets data-theme and data-variant on <html>
+  useTheme();
   const [splashDone, setSplashDone] = useState(false);
   const [onboarded, setOnboarded] = useState(hasOnboarded);
   const [tab, setTab] = useState<TabKey>('matchday');
+
+  const { rows: tableRows } = useStandings();
+  const { data: seasonData } = useSeason();
 
   if (!splashDone) {
     return <SplashScreen onDone={() => setSplashDone(true)} />;
@@ -39,8 +44,8 @@ export default function App() {
     <div className={appStyles.shell}>
       <div className={appStyles.screen}>
         {tab === 'matchday' && <MatchdayScreen />}
-        {tab === 'table'    && <TableScreen rows={[]} />}
-        {tab === 'season'   && <SeasonScreen data={null} />}
+        {tab === 'table'    && <TableScreen rows={tableRows} />}
+        {tab === 'season'   && <SeasonScreen data={seasonData} />}
         {tab === 'profile'  && <ProfileScreen />}
       </div>
       <TabBar active={tab} onChange={setTab} />

@@ -19,8 +19,8 @@ export function MatchdayScreen() {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const refreshing = usePullToRefresh(scrollRef, refresh);
 
-  const goPrev = useCallback(() => setSpielTag(d => Math.max(1, d - 1)), [setSpielTag]);
-  const goNext = useCallback(() => setSpielTag(d => Math.min(34, d + 1)), [setSpielTag]);
+  const goPrev = useCallback(() => setSpielTag(Math.max(1, spieltag - 1)), [setSpielTag, spieltag]);
+  const goNext = useCallback(() => setSpielTag(Math.min(34, spieltag + 1)), [setSpielTag, spieltag]);
   const swipeRef = useSwipe(goPrev, goNext);
 
   // Attach both refs to the same element

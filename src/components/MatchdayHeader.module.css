@@ -28,10 +28,10 @@
 
 .title {
   font-family: var(--bl-font);
-  font-size: 64px; font-weight: 900;
-  letter-spacing: -3px; line-height: 0.85;
+  font-size: 36px; font-weight: 900;
+  letter-spacing: -1.5px; line-height: 1;
   font-stretch: 80%;
-  margin: 10px 0 4px;
+  margin: 6px 0 4px;
   color: var(--bl-ink);
   text-transform: uppercase;
 }
@@ -81,8 +81,8 @@
 }
 .pagerValue {
   font-family: var(--bl-font);
-  font-size: 22px; font-weight: 900;
-  letter-spacing: -1px;
+  font-size: 18px; font-weight: 900;
+  letter-spacing: -0.5px;
   font-stretch: 80%;
   color: var(--bl-accent);
   font-variant-numeric: tabular-nums;
