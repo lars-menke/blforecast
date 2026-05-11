@@ -31,8 +31,8 @@
 .title {
   font-family: var(--bl-font);
   font-size: 32px; font-weight: 900;
-  letter-spacing: -3px; line-height: 0.85;
-  font-stretch: 80%;
+  letter-spacing: -0.5px; line-height: 1;
+  font-stretch: 95%;
   margin: 10px 0 0;
   color: var(--bl-ink);
   text-transform: uppercase;

@@ -29,7 +29,7 @@
 .title {
   font-family: var(--bl-font);
   font-size: 36px; font-weight: 900;
-  letter-spacing: -1.5px; line-height: 1;
+  letter-spacing: -0.5px; line-height: 1;
   font-stretch: 80%;
   margin: 6px 0 4px;
   color: var(--bl-ink);

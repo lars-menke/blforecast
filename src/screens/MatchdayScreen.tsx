@@ -84,7 +84,7 @@ export function MatchdayScreen() {
         )}
 
         {!loading && !error && groups.map(({ day, items }) => (
-          <div key={day}>
+          <div key={day} className={s.group}>
             {groups.length > 1 && (
               <MatchdayDaySeparator name={day} count={items.length} />
             )}
