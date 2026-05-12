@@ -4,9 +4,9 @@ import type { Club } from '../lib/clubs';
 import type { SeasonForecast } from '../lib/season';
 import styles from './SeasonScreen.module.css';
 
-type Props = { data: SeasonForecast | null; loading: boolean };
+type Props = { data: SeasonForecast | null; loading: boolean; logos: Record<string, string> };
 
-export function SeasonScreen({ data, loading }: Props) {
+export function SeasonScreen({ data, loading, logos }: Props) {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
@@ -43,7 +43,7 @@ export function SeasonScreen({ data, loading }: Props) {
               return (
                 <div key={r.code} className={styles.row}>
                   <div className={styles.projPos}>{r.projPos}</div>
-                  <div className={styles.logoWrap}><TeamLogo club={fallback} size="sm" /></div>
+                  <div className={styles.logoWrap}><TeamLogo club={fallback} logoUrl={logos[r.code]} size="sm" /></div>
                   <div className={styles.name}>{club?.name ?? r.code}</div>
                   <div className={styles.rowRight}>
                     {delta !== 0 && (

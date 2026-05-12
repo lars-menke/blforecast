@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTheme } from './lib/useTheme';
 import { useStandings } from './lib/useStandings';
 import { useSeason } from './lib/useSeason';
+import { useLogos } from './lib/useLogos';
 import { MatchdayScreen } from './screens/MatchdayScreen';
 import { TableScreen } from './screens/TableScreen';
 import { SeasonScreen } from './screens/SeasonScreen';
@@ -19,6 +20,7 @@ export default function App() {
 
   const { rows: tableRows, loading: tableLoading } = useStandings();
   const { data: seasonData, loading: seasonLoading } = useSeason();
+  const logos = useLogos();
 
   if (!splashDone) {
     return <SplashScreen onDone={() => setSplashDone(true)} />;
@@ -28,8 +30,8 @@ export default function App() {
     <div className={appStyles.shell}>
       <div className={appStyles.screen}>
         {tab === 'matchday' && <MatchdayScreen onThemeToggle={toggle} isDark={isDark} />}
-        {tab === 'table'    && <TableScreen rows={tableRows} loading={tableLoading} />}
-        {tab === 'season'   && <SeasonScreen data={seasonData} loading={seasonLoading} />}
+        {tab === 'table'    && <TableScreen rows={tableRows} loading={tableLoading} logos={logos} />}
+        {tab === 'season'   && <SeasonScreen data={seasonData} loading={seasonLoading} logos={logos} />}
         {tab === 'profile'  && <ProfileScreen />}
       </div>
       <TabBar active={tab} onChange={setTab} />

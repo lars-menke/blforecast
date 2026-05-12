@@ -4,7 +4,7 @@ import type { Club } from '../lib/clubs';
 import type { TableRow } from '../lib/standings';
 import styles from './TableScreen.module.css';
 
-type Props = { rows: TableRow[]; loading: boolean };
+type Props = { rows: TableRow[]; loading: boolean; logos: Record<string, string> };
 
 const ZONE_COLORS: Record<string, string> = {
   cl: 'var(--system-blue)',
@@ -14,7 +14,7 @@ const ZONE_COLORS: Record<string, string> = {
   desc: 'var(--system-red)',
 };
 
-export function TableScreen({ rows, loading }: Props) {
+export function TableScreen({ rows, loading, logos }: Props) {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
@@ -46,7 +46,7 @@ export function TableScreen({ rows, loading }: Props) {
                   <div className={styles.zoneBar} style={{ background: zoneColor }} />
                 )}
                 <div className={styles.pos}>{r.pos}</div>
-                <div className={styles.logoWrap}><TeamLogo club={fallback} size="sm" /></div>
+                <div className={styles.logoWrap}><TeamLogo club={fallback} logoUrl={logos[r.code]} size="sm" /></div>
                 <div className={styles.name}>{club?.name ?? r.code}</div>
                 <div className={styles.form}>
                   {r.last5.map((x, i) => (
