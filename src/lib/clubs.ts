@@ -1,7 +1,5 @@
 import type { TeamStats } from './poisson';
 
-export type TeamCode = string;
-
 export type Club = {
   code: string;
   name: string;

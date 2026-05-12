@@ -1,85 +1,93 @@
-import { useEffect, useState } from 'react';
-import s from './MatchCard.module.css';
-import { TeamLogo } from './TeamLogo';
-import { useLongPress } from '../lib/hooks';
-import { CLUBS } from '../lib/clubs';
+import type { Club } from '../lib/clubs';
 import type { MatchResult } from '../lib/poisson';
+import { TeamLogo } from './TeamLogo';
+import { ProbabilityBar } from './ProbabilityBar';
+import styles from './MatchCard.module.css';
 
 type Props = {
-  match: MatchResult;
-  onClick: () => void;
-  onLongPress?: (point: { x: number; y: number }) => void;
+  home: Club;
+  away: Club;
+  kickoff: string;
+  result: MatchResult;
+  homeLogo?: string;
+  awayLogo?: string;
+  topTip?: boolean;
+  actual?: { g1: number; g2: number } | null;
+  onClick?: () => void;
 };
 
-export function MatchCard({ match: m, onClick, onLongPress }: Props) {
-  const seen = useRevealOnMount();
-  const lp = useLongPress(p => onLongPress?.(p));
-  const home = CLUBS[m.home];
-  const away = CLUBS[m.away];
-  const top = m.fp >= 0.7;
-  const cat = m.fp >= 0.55 ? 'FAV' : m.fp < 0.55 && m.fp >= 0.45 ? '50/50' : 'KANTE';
-  const badge = top ? 'TOP' : cat;
-  const [hg, ag] = m.tipp.split(':').map(Number);
+const OUTCOME_LABEL: Record<string, string> = { H: 'Heimsieg', D: 'Remis', A: 'Auswärtssieg' };
+
+type Cat = { label: string; badge: 'badgeFav' | 'badgeMid' | 'badgeFifty'; stripe: 'accentFav' | 'accentMid' | 'accentFifty' };
+
+function category(fp: number): Cat {
+  if (fp >= 0.70) return { label: 'Favorit', badge: 'badgeFav', stripe: 'accentFav' };
+  if (fp >= 0.55) return { label: 'Kante', badge: 'badgeMid', stripe: 'accentMid' };
+  return { label: '50/50', badge: 'badgeFifty', stripe: 'accentFifty' };
+}
+
+export function MatchCard({ home, away, kickoff, result, homeLogo, awayLogo, topTip, actual, onClick }: Props) {
+  const [hg, ag] = (result.tipp ?? '?').split(':').map(Number);
+  const cat = category(result.fp);
+
+  const actualOutcome = actual
+    ? actual.g1 > actual.g2 ? 'H' : actual.g1 < actual.g2 ? 'A' : 'D'
+    : null;
+  const correct = actualOutcome !== null && actualOutcome === result.wo;
+  const incorrect = actualOutcome !== null && actualOutcome !== result.wo;
 
   return (
-    <button className={s.card} data-top={top} onClick={onClick} {...lp}>
-      <div className={s.body}>
-        <div className={s.head}>
-          <div className={s.time}>{m.dateLabel.toUpperCase()} · {m.time}</div>
-          <span className={s.badge} data-top={top}>{badge}</span>
-        </div>
+    <button className={`${styles.card}${topTip ? ` ${styles.cardTop}` : ''}`} onClick={onClick} type="button">
+      <div className={`${styles.accentStripe} ${styles[cat.stripe]}`} />
 
-        <div className={s.grid}>
-          <div className={s.team} data-side="home">
-            <TeamLogo code={m.home} className={s.mark} />
-            <span className={s.teamName}>{home?.name ?? m.home}</span>
-          </div>
-
-          <div className={s.mid}>
-            <div className={s.score}>
-              <em data-pick={m.wo === 'H'}>{isNaN(hg) ? '?' : hg}</em>
-              <span className={s.scoreColon}>:</span>
-              <em data-pick={m.wo === 'A'}>{isNaN(ag) ? '?' : ag}</em>
-            </div>
-          </div>
-
-          <div className={s.team} data-side="away">
-            <TeamLogo code={m.away} className={s.mark} />
-            <span className={s.teamName}>{away?.name ?? m.away}</span>
+      <div className={styles.inner}>
+        {/* Header */}
+        <div className={styles.header}>
+          <span className={styles.meta}>{kickoff}</span>
+          <div className={styles.badges}>
+            {topTip && <span className={`${styles.badge} ${styles.badgeTop}`}>TOP</span>}
+            <span className={`${styles.badge} ${styles[cat.badge]}`}>{cat.label}</span>
           </div>
         </div>
 
-        <div className={s.prob}>
-          <div className={s.probBar}>
-            <div className={s.probSeg} data-pick={m.wo === 'H'} style={{ width: seen ? `${m.pH * 100}%` : 0 }} />
-            <div className={s.probSeg} data-pick={m.wo === 'D'} style={{ width: seen ? `${m.pD * 100}%` : 0 }} />
-            <div className={s.probSeg} data-pick={m.wo === 'A'} style={{ width: seen ? `${m.pA * 100}%` : 0 }} />
+        {/* Teams + Score */}
+        <div className={styles.body}>
+          <div className={styles.teams}>
+            <div className={styles.team}>
+              <TeamLogo club={home} logoUrl={homeLogo} size="sm" />
+              <span className={styles.teamName}>{home.name}</span>
+            </div>
+            <div className={styles.team}>
+              <TeamLogo club={away} logoUrl={awayLogo} size="sm" />
+              <span className={styles.teamName}>{away.name}</span>
+            </div>
           </div>
-          <div className={s.probNums}>
-            <div className={s.probNum} data-pick={m.wo === 'H'}>
-              <span className={s.v}>{(m.pH * 100).toFixed(0)}</span>
-              <span className={s.l}>1</span>
-            </div>
-            <div className={s.probNum} data-center>
-              <span className={s.v}>{(m.pD * 100).toFixed(0)}</span>
-              <span className={s.l}>X</span>
-            </div>
-            <div className={s.probNum} data-right data-pick={m.wo === 'A'}>
-              <span className={s.v}>{(m.pA * 100).toFixed(0)}</span>
-              <span className={s.l}>2</span>
-            </div>
+
+          <div className={styles.score}>
+            {actual ? (
+              <>
+                <div className={`${styles.scoreValue} ${correct ? styles.scoreCorrect : styles.scoreIncorrect}`} data-numeric>
+                  {actual.g1}:{actual.g2}
+                </div>
+                <div className={`${styles.scoreLabel} ${correct ? styles.scoreLabelCorrect : incorrect ? styles.scoreLabelIncorrect : ''}`}>
+                  {correct ? '✓ Richtig' : '✗ Falsch'}
+                </div>
+                <div className={styles.tippSmall} data-numeric>Tipp {isNaN(hg) ? '?' : hg}:{isNaN(ag) ? '?' : ag}</div>
+              </>
+            ) : (
+              <>
+                <div className={styles.scoreValue} data-numeric>
+                  {isNaN(hg) ? '?' : hg}:{isNaN(ag) ? '?' : ag}
+                </div>
+                <div className={styles.scoreLabel}>{OUTCOME_LABEL[result.wo] ?? 'Tipp'}</div>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Probability Bar */}
+        <ProbabilityBar home={result.pH} draw={result.pD} away={result.pA} />
       </div>
     </button>
   );
-}
-
-function useRevealOnMount() {
-  const [seen, setSeen] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setSeen(true), 120);
-    return () => clearTimeout(t);
-  }, []);
-  return seen;
 }

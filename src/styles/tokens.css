@@ -146,61 +146,6 @@ html[data-theme='dark'] {
 }
 
 /* ==========================================================================
-   Velocity · Brand Tokens (Dark-First)
-   ========================================================================== */
-
-:root {
-  --bl-paper:        #0A0A0F;
-  --bl-paper-2:      #131319;
-  --bl-paper-3:      #1B1B23;
-  --bl-ink:          #F5F4ED;
-  --bl-ink-2:        #D4D2C8;
-  --bl-ink-3:        #8E8B82;
-  --bl-ink-4:        #5C5A54;
-  --bl-ink-5:        #36352F;
-  --bl-hair:         rgba(245, 244, 237, 0.08);
-  --bl-hair-strong:  rgba(245, 244, 237, 0.20);
-
-  --bl-accent:       #D6FF1C;
-  --bl-accent-2:     #2A2F08;
-  --bl-accent-deep:  #B8DD00;
-  --bl-accent-glow:  rgba(214, 255, 28, 0.30);
-  --bl-plasma:       #FF1C7A;
-
-  --bl-p-h:  var(--bl-accent);
-  --bl-p-d:  var(--bl-ink-4);
-  --bl-p-a:  var(--bl-plasma);
-
-  --bl-good: #2CE588;
-  --bl-bad:  #FF4458;
-
-  --bl-r-card: 6px;
-  --bl-r-tile: 4px;
-  --bl-r-pill: 4px;
-
-  --bl-font:
-    'Inter Tight', system-ui, -apple-system, sans-serif;
-  --bl-font-mono:
-    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Monaco, monospace;
-}
-
-html[data-theme='light'] {
-  --bl-paper:        #F5F4ED;
-  --bl-paper-2:      #E8E6DC;
-  --bl-paper-3:      #D9D6C8;
-  --bl-ink:          #0A0A0F;
-  --bl-ink-2:        #2A2A2F;
-  --bl-ink-3:        #5C5A54;
-  --bl-ink-4:        #8E8B82;
-  --bl-ink-5:        #BCBAB0;
-  --bl-hair:         rgba(10, 10, 15, 0.10);
-  --bl-hair-strong:  rgba(10, 10, 15, 0.22);
-  --bl-accent:       #B8DD00;
-  --bl-accent-deep:  #8FAD00;
-  --bl-plasma:       #E60068;
-}
-
-/* ==========================================================================
    Vereinsfarben
    ========================================================================== */
 

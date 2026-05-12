@@ -1,5 +1,4 @@
 @import './tokens.css';
-@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @font-face {
   font-family: 'Geist';
@@ -30,13 +29,6 @@ body,
 html {
   -webkit-text-size-adjust: 100%;
   color-scheme: light dark;
-}
-
-html[data-variant='velocity'] body {
-  font-family: var(--bl-font);
-  font-feature-settings: 'ss01' 1;
-  background: var(--bl-paper);
-  color: var(--bl-ink);
 }
 
 body {

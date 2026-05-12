@@ -1,120 +1,146 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  fetchSeason,
-  detectCurrentSpieltag,
-  buildMatchEntries,
-  buildDynST,
-} from './openligadb';
-import { recalcMatches } from './poisson';
-import { CLUBS, FALLBACK_STATS } from './clubs';
-import type { MatchResult } from './poisson';
-import type { OldbMatch } from './openligadb';
+import { useState, useEffect, useCallback } from 'react';
+import { fetchSeason, fetchPrevSeason, fetchLogos, buildDynST, buildMatchEntries, detectCurrentSpieltag, resolveCode } from './openligadb';
+import { fetchOdds } from './fetchOdds';
+import { recalcMatches, calcSingle, type MatchResult, type TeamStats } from './poisson';
+import { buildCalib, type CalibSample, type CalibParams } from './calibration';
+import { FALLBACK_STATS } from './clubs';
+import type { MatchEntry, OldbMatch } from './openligadb';
 
-function parseDateLabel(kickoff: string): { dateLabel: string; time: string } {
-  // format from fmtKickoff: "Fr 18.04 · 20:30"
-  const m = kickoff.match(/^(\S+)\s+[\d.]+\s+·\s+(\d{2}:\d{2})$/);
-  if (m) return { dateLabel: m[1] + '.', time: m[2] };
-  return { dateLabel: '', time: kickoff };
+export type MatchdayEntry = {
+  id: string;
+  home: string;
+  away: string;
+  kickoff: string;
+  result: MatchResult;
+  actual: { g1: number; g2: number } | null;
+};
+
+export type MatchdayState = {
+  loading: boolean;
+  error: string | null;
+  spieltag: number;
+  trueSpieltag: number;
+  matches: MatchdayEntry[];
+  logos: Record<string, string>;
+  hasMono: boolean;
+  hasMarket: boolean;
+  hasCalib: boolean;
+  setSpielTag: (nr: number) => void;
+};
+
+const DEFAULT_ST: TeamStats = { rank: 9, hGF: 1.3, hGA: 1.4, aGF: 1.1, aGA: 1.5 };
+
+function getActualOutcome(all: OldbMatch[], nr: number, home: string, away: string): 'H' | 'D' | 'A' | null {
+  const m = all.find(m =>
+    m.group.groupOrderID === nr &&
+    m.matchIsFinished &&
+    resolveCode(m.team1) === home &&
+    resolveCode(m.team2) === away
+  );
+  if (!m) return null;
+  const r = m.matchResults?.find(x => x.resultTypeID === 2);
+  if (!r) return null;
+  return r.pointsTeam1 > r.pointsTeam2 ? 'H' : r.pointsTeam1 < r.pointsTeam2 ? 'A' : 'D';
 }
 
-function buildDateRange(all: OldbMatch[], nr: number): string {
-  const ms = all.filter(m => m.group.groupOrderID === nr);
-  const dates = ms
-    .map(m => new Date(m.matchDateTimeUTC ?? m.matchDateTime ?? ''))
-    .filter(d => !isNaN(d.getTime()))
-    .sort((a, b) => a.getTime() - b.getTime());
-  if (!dates.length) return '';
-  const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-  const fmt = (d: Date) =>
-    `${days[d.getDay()]} ${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
-  const first = dates[0], last = dates[dates.length - 1];
-  return first.toDateString() === last.toDateString()
-    ? fmt(first)
-    : `${fmt(first)}–${fmt(last)}`;
-}
-
-export function useMatchday() {
-  const [spieltag, setSpieltagState] = useState<number | null>(null);
-  const [trueSpieltag, setTrueSpieltag] = useState(1);
-  const [matches, setMatches] = useState<MatchResult[]>([]);
-  const [dateRange, setDateRange] = useState('');
+export function useMatchday(): MatchdayState {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const allRef = useRef<OldbMatch[] | null>(null);
+  const [trueSpieltag, setTrueSpieltag] = useState(1);
+  const [spieltag, setSpieltagState] = useState(1);
+  const [stDataMap, setStDataMap] = useState<Record<number, Record<string, TeamStats>>>({});
+  const [matchesMap, setMatchesMap] = useState<Record<number, MatchEntry[]>>({});
+  const [logos, setLogos] = useState<Record<string, string>>({});
+  const [calib, setCalib] = useState<CalibParams | null>(null);
 
-  const load = useCallback(async (nr: number | null) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const all = allRef.current ?? await fetchSeason();
-      allRef.current = all;
+  const rawMatches = matchesMap[spieltag] ?? [];
+  const stData = stDataMap[spieltag] ?? {};
+  const results = recalcMatches(rawMatches, stData, FALLBACK_STATS, calib);
 
-      const current = detectCurrentSpieltag(all);
-      setTrueSpieltag(current);
-      const target = nr ?? current;
-      if (spieltag === null) setSpieltagState(target);
+  const matches: MatchdayEntry[] = rawMatches
+    .map(m => ({ id: m.id, home: m.home, away: m.away, kickoff: m.kickoff, result: results[m.id], actual: m.actual }))
+    .filter(m => m.result);
 
-      const entries = buildMatchEntries(all, target);
-      const stData = buildDynST(all, target);
+  const hasMono = matches.some(m => m.result.adjusted);
+  const hasMarket = matches.some(m => m.result.marketApplied);
+  const hasCalib = calib !== null;
 
-      const calcMap = recalcMatches(entries, stData, FALLBACK_STATS, null);
+  const setSpielTag = useCallback((nr: number) => setSpieltagState(nr), []);
 
-      const results: MatchResult[] = entries.flatMap(e => {
-        const r = calcMap[e.id];
-        if (!r || !CLUBS[e.home] || !CLUBS[e.away]) return [];
-        const { dateLabel, time } = parseDateLabel(e.kickoff);
-        return [{
-          ...r,
-          id: e.id,
-          home: e.home,
-          away: e.away,
-          dateLabel,
-          time,
-          actual: e.actual,
-          market: r.marketApplied,
-          conf: Math.min(5, Math.max(1, Math.round(r.fp * 5))),
-          formH: (e.hForm ? [
-            e.hForm.gf > e.hForm.ga ? 'S' : e.hForm.gf < e.hForm.ga ? 'N' : 'U',
-          ] : []) as ('S'|'U'|'N')[],
-          formA: (e.aForm ? [
-            e.aForm.gf > e.aForm.ga ? 'S' : e.aForm.gf < e.aForm.ga ? 'N' : 'U',
-          ] : []) as ('S'|'U'|'N')[],
-          topScores: r.srt,
-        }];
-      });
+  useEffect(() => {
+    let cancelled = false;
 
-      setMatches(results);
-      setDateRange(buildDateRange(all, target));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Fehler beim Laden');
-    } finally {
-      setLoading(false);
+    async function init() {
+      try {
+        const [all, prevAll, oddsMap] = await Promise.all([fetchSeason(), fetchPrevSeason(), fetchOdds()]);
+        if (cancelled) return;
+
+        const current = detectCurrentSpieltag(all);
+        setTrueSpieltag(current);
+        setSpieltagState(current);
+
+        const newStMap: Record<number, Record<string, TeamStats>> = {};
+        const newMatchesMap: Record<number, MatchEntry[]> = {};
+        const calibSamples: CalibSample[] = [];
+
+        // Previous season: collect all matchdays 5+ as calibration baseline
+        if (prevAll.length > 0) {
+          const maxPrev = Math.max(...prevAll.map(m => m.group.groupOrderID));
+          for (let nr = 5; nr <= maxPrev; nr++) {
+            const stData = buildDynST(prevAll, nr);
+            const entries = buildMatchEntries(prevAll, nr);
+            for (const entry of entries) {
+              const act = getActualOutcome(prevAll, nr, entry.home, entry.away);
+              if (!act) continue;
+              const h = stData[entry.home] ?? FALLBACK_STATS[entry.home] ?? DEFAULT_ST;
+              const a = stData[entry.away] ?? FALLBACK_STATS[entry.away] ?? DEFAULT_ST;
+              const raw = calcSingle(h, a, null, null, entry.hForm, entry.aForm);
+              calibSamples.push({ pH: raw.pH, pD: raw.pD, pA: raw.pA, actual: act });
+            }
+          }
+        }
+
+        const maxSt = Math.max(...all.map(m => m.group.groupOrderID));
+
+        for (let nr = 1; nr <= maxSt; nr++) {
+          const stData = buildDynST(all, nr);
+          const entries = buildMatchEntries(all, nr, nr >= current ? oddsMap : {});
+          if (!entries.length) continue;
+
+          newMatchesMap[nr] = entries;
+          newStMap[nr] = stData;
+
+          // Collect calibration samples from played matchdays (raw model, no calib yet)
+          if (nr >= 5 && nr < current) {
+            for (const entry of entries) {
+              const act = getActualOutcome(all, nr, entry.home, entry.away);
+              if (!act) continue;
+              const h = stData[entry.home] ?? FALLBACK_STATS[entry.home] ?? DEFAULT_ST;
+              const a = stData[entry.away] ?? FALLBACK_STATS[entry.away] ?? DEFAULT_ST;
+              const raw = calcSingle(h, a, null, null, entry.hForm, entry.aForm);
+              calibSamples.push({ pH: raw.pH, pD: raw.pD, pA: raw.pA, actual: act });
+            }
+          }
+        }
+
+        if (cancelled) return;
+        setStDataMap(newStMap);
+        setMatchesMap(newMatchesMap);
+        setCalib(buildCalib(calibSamples));
+        setLoading(false);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Ladefehler');
+          setLoading(false);
+        }
+      }
     }
-  }, [spieltag]);
 
-  const setSpielTag = useCallback((nr: number) => {
-    setSpieltagState(nr);
-    load(nr);
-  }, [load]);
+    init();
+    fetchLogos().then(l => { if (!cancelled) setLogos(l); });
 
-  const refresh = useCallback(() => {
-    allRef.current = null; // clear cache to force reload
-    load(spieltag);
-  }, [load, spieltag]);
+    return () => { cancelled = true; };
+  }, []);
 
-  useEffect(() => { load(null); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const topCount = matches.filter(m => m.fp >= 0.7).length;
-
-  return {
-    loading,
-    error,
-    spieltag: spieltag ?? trueSpieltag,
-    trueSpieltag,
-    matches,
-    topCount,
-    dateRange,
-    setSpielTag,
-    refresh,
-  };
+  return { loading, error, spieltag, trueSpieltag, matches, logos, hasMono, hasMarket, hasCalib, setSpielTag };
 }

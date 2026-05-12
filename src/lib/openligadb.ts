@@ -211,28 +211,6 @@ function normalizeLogoUrl(url: string): string {
   return m ? m[1] + m[2] : url;
 }
 
-import { useEffect, useState } from 'react';
-
-let logoCache: Map<string, string> | null = null;
-const logoListeners: Array<(m: Map<string, string>) => void> = [];
-
-export function useLogos(): Map<string, string> {
-  const [logos, setLogos] = useState<Map<string, string>>(logoCache ?? new Map());
-  useEffect(() => {
-    if (logoCache) { setLogos(logoCache); return; }
-    let cancelled = false;
-    fetchLogos().then(rec => {
-      if (cancelled) return;
-      const m = new Map(Object.entries(rec));
-      logoCache = m;
-      setLogos(m);
-      logoListeners.forEach(fn => fn(m));
-    });
-    return () => { cancelled = true; };
-  }, []);
-  return logos;
-}
-
 export async function fetchLogos(): Promise<Record<string, string>> {
   const logos: Record<string, string> = {};
   try {
