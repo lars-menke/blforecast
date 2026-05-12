@@ -97,7 +97,7 @@ export function MatchdayScreen({ onThemeToggle, isDark }: Props) {
             seen.get(key)!.push(m);
           }
           return groups.map(({ key, items }) => (
-            <div key={key}>
+            <div key={key} className={styles.group}>
               {groups.length > 1 && <div className={styles.timeGroup}>{key}</div>}
               {items.map(m => {
                 const home = CLUBS[m.home];
