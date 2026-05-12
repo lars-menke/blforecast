@@ -152,12 +152,13 @@ html[data-theme='dark'] .badgeTop {
 }
 
 .scoreValue {
-  font-size: 26px;
-  font-weight: var(--weight-bold);
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 400;
   color: var(--text-primary);
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.5px;
+  letter-spacing: 2px;
 }
 
 .scoreLabel {

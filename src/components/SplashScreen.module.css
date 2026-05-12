@@ -41,10 +41,11 @@
 
 .title {
   margin-top: 20px;
-  font-size: 26px;
-  font-weight: 700;
+  font-family: 'Bebas Neue', 'Arial Narrow', Impact, sans-serif;
+  font-size: 48px;
+  font-weight: 400;
   color: #FFFFFF;
-  letter-spacing: -0.4px;
+  letter-spacing: 3px;
   opacity: 0;
   transform: translateY(8px);
   transition: opacity 0.4s ease 0.15s, transform 0.4s ease 0.15s;

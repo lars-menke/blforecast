@@ -70,12 +70,13 @@
 }
 
 .tippScore {
-  font-size: 36px;
-  font-weight: var(--weight-bold);
+  font-family: var(--font-display);
+  font-size: 52px;
+  font-weight: 400;
   color: var(--text-primary);
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -1px;
+  letter-spacing: 4px;
 }
 
 .tippMeta {
