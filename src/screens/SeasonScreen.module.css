@@ -1,0 +1,191 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--bg-page);
+}
+
+.header {
+  padding: max(var(--space-5), env(safe-area-inset-top, var(--space-5))) var(--space-5) var(--space-3);
+  border-bottom: var(--hairline) solid var(--separator);
+}
+
+.large {
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  line-height: 1;
+  margin: 0;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.subtitle {
+  font-size: var(--size-footnote);
+  color: var(--text-secondary);
+  margin: var(--space-1) 0 0;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) 0;
+  font-size: var(--size-subhead);
+  color: var(--text-secondary);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--separator);
+  border-top-color: var(--system-blue);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.hero {
+  background: var(--bg-card);
+  margin: var(--space-4);
+  border-radius: var(--radius-card);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  text-align: center;
+}
+
+.heroLabel {
+  font-size: var(--size-footnote);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: var(--space-2);
+}
+
+.heroTitle {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.heroProb {
+  font-size: var(--size-title-1);
+  font-weight: var(--weight-bold);
+  color: var(--system-blue);
+  margin-top: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.heroSub {
+  font-size: var(--size-footnote);
+  color: var(--text-secondary);
+  margin-top: var(--space-2);
+}
+
+.sectionLabel {
+  font-size: var(--size-footnote);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 0 var(--space-5) var(--space-1);
+}
+
+.list {
+  background: var(--bg-card);
+  margin: 0 var(--space-4) var(--space-4);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-4);
+  border-bottom: var(--hairline) solid var(--separator);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.projPos {
+  font-size: var(--size-footnote);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  width: 18px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.logoWrap {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.name {
+  font-size: var(--size-subhead);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.delta {
+  font-size: var(--size-caption-1);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.delta[data-dir='up'] { color: var(--system-green); }
+.delta[data-dir='down'] { color: var(--system-red); }
+
+.clProb {
+  font-size: var(--size-caption-1);
+  font-weight: var(--weight-medium);
+  color: var(--system-blue);
+  background: color-mix(in srgb, var(--system-blue) 12%, transparent);
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+}
+
+.descProb {
+  font-size: var(--size-caption-1);
+  font-weight: var(--weight-medium);
+  color: var(--system-red);
+  background: color-mix(in srgb, var(--system-red) 12%, transparent);
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+}
+
+.footer {
+  text-align: center;
+  font-size: var(--size-caption-2);
+  color: var(--text-tertiary);
+  padding: 0 var(--space-4) max(var(--space-6), env(safe-area-inset-bottom, var(--space-6)));
+}
