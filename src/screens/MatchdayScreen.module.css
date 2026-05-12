@@ -32,12 +32,14 @@
 }
 
 .large {
-  font-size: var(--size-large-title);
-  font-weight: var(--weight-bold);
-  letter-spacing: -0.7px;
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 400;
+  letter-spacing: 1px;
   line-height: 1;
   margin: 0;
   color: var(--text-primary);
+  text-transform: uppercase;
 }
 
 .subtitle {
@@ -92,11 +94,13 @@
 }
 
 .spieltagBtnNr {
-  font-size: var(--size-title-2);
-  font-weight: var(--weight-bold);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
   color: var(--system-blue);
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
 }
 
 .spieltagBtnLabel {

@@ -38,6 +38,7 @@
   --font-sans:
     'Geist', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
     'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  --font-display: 'Bebas Neue', 'Arial Narrow', Impact, sans-serif;
   --font-mono:
     ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Mono', 'Roboto Mono',
     Consolas, monospace;

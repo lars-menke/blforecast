@@ -127,13 +127,16 @@ html[data-theme='dark'] .badgeTop {
 }
 
 .teamName {
-  font-size: var(--size-body);
-  font-weight: var(--weight-semibold);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
   color: var(--text-primary);
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-transform: uppercase;
 }
 
 /* ── Score ── */
